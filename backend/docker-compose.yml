@@ -1,0 +1,45 @@
+services:
+  # Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "4000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth_service_1
+      - auth_service_2
+
+  # Auth Replica 1
+  auth_service_1:
+    build: ./auth_service
+    environment:
+      - SERVER_ID=Instance-1
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  # Auth Replica 2
+  auth_service_2:
+    build: ./auth_service
+    environment:
+      - SERVER_ID=Instance-2
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  # Shared Session Store (HA Enabler)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # Database (Simulated)
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: myapp
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
